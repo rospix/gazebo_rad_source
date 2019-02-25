@@ -1,0 +1,28 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <model name="radiation_souce">
+    <static>1</static>
+    <link name="link">
+      <pose>0 0 0.1 0 0 0</pose>
+
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>0.2 0.2 0.2</size>
+          </box>
+        </geometry>
+      </visual>
+
+    </link>
+
+    <plugin name="gazebo_rad_source" filename="libgazebo_rad_source.so">
+
+      <material>Am</material>
+      <activity>1e9</activity>
+
+    </plugin>
+
+  </model>
+</sdf>
+
+
