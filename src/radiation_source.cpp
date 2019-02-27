@@ -140,6 +140,7 @@ namespace gazebo
     radiation_msg.set_z(T_W_I.Pos().Z());
     radiation_msg.set_material(material_);
     radiation_msg.set_activity(activity_);
+    radiation_msg.set_id(this->node_handle_->GetId());
 
     rad_pub->Publish(radiation_msg);
 
@@ -152,6 +153,7 @@ namespace gazebo
     rad_out.z        = T_W_I.Pos().Z();
     rad_out.activity = activity_;
     rad_out.material = material_;
+    rad_out.id = this->node_handle_->GetId();
 
     test_pub.publish(rad_out);
   }
