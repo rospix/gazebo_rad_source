@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sdf version="1.5">
-  <model name="radiation_souce">
+  <model name="cs137">
     <static>1</static>
     <link name="link">
       <pose>0 0 0.1 0 0 0</pose>
@@ -15,10 +15,10 @@
 
     </link>
 
-    <plugin name="gazebo_rad_source" filename="libgazebo_rad_source.so">
+    <plugin name="cs137" filename="libgazebo_rad_source.so">
 
-      <material>Am</material>
-      <activity>1e9</activity>
+      <material>Cs137</material>
+      <activity>100e9</activity>
 
     </plugin>
 
