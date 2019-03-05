@@ -74,6 +74,12 @@ namespace gazebo
   }
 
   RadiationSource::~RadiationSource() {
+    // end all ROS related stuff
+    this->rosNode->shutdown();
+    // wait for threads to finish
+    this->rosQueueThread.join();
+    this->callback_queue_thread_.join();
+    // end connection to gazebo
     updateConnection_->~Connection();
   }
 
@@ -153,7 +159,7 @@ namespace gazebo
     rad_out.z        = T_W_I.Pos().Z();
     rad_out.activity = activity_;
     rad_out.material = material_;
-    rad_out.id = this->node_handle_->GetId();
+    rad_out.id       = this->node_handle_->GetId();
 
     test_pub.publish(rad_out);
   }
