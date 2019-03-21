@@ -128,7 +128,7 @@ namespace gazebo
 
     this->rosQueueThread = std::thread(std::bind(&RadiationSource::QueueThread, this));
 
-    ROS_INFO("[RadiationSource]: initialized");
+    ROS_INFO("[RadiationSource%u]: initialized", this->model_->GetId());
   }
 
   //}
