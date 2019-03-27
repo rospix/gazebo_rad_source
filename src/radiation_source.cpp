@@ -122,7 +122,7 @@ namespace gazebo
 
     this->modelName = model_->GetName();
 
-    this->rad_pub = node_handle_->Advertise<gazebo_rad_msgs::msgs::RadiationSource>("~/radiation", 1);
+    this->rad_pub = node_handle_->Advertise<gazebo_rad_msgs::msgs::RadiationSource>("~/radiation/sources", 1);
 
     this->test_pub = this->rosNode->advertise<gazebo_rad_msgs::RadiationSource>("radiation", 1);
 
