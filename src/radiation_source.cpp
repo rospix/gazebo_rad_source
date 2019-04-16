@@ -59,9 +59,6 @@ namespace gazebo
 
     gazebo_rad_msgs::msgs::RadiationSource radiation_msg;
 
-    common::Time last_gps_time_;
-    common::Time last_time_;
-
     std::string modelName;
 
   private:
@@ -100,9 +97,6 @@ namespace gazebo
 
     world_ = model_->GetWorld();
 
-    last_time_     = world_->SimTime();
-    last_gps_time_ = world_->SimTime();
-
     if (_sdf->HasElement("material")) {
       getSdfParam<std::string>(_sdf, "material", material_, material_);
     } else {
@@ -137,26 +131,22 @@ namespace gazebo
 
   void RadiationSource::OnUpdate(const common::UpdateInfo&) {
 
-    common::Time current_time = world_->SimTime();
+    auto pose = model_->WorldPose();
 
-    ignition::math::Pose3d T_W_I = model_->WorldPose();
-
-    radiation_msg.set_x(T_W_I.Pos().X());
-    radiation_msg.set_y(T_W_I.Pos().Y());
-    radiation_msg.set_z(T_W_I.Pos().Z());
+    radiation_msg.set_x(pose.Pos().X());
+    radiation_msg.set_y(pose.Pos().Y());
+    radiation_msg.set_z(pose.Pos().Z());
     radiation_msg.set_material(material_);
     radiation_msg.set_activity(activity_);
     radiation_msg.set_id(this->node_handle_->GetId());
 
     rad_pub->Publish(radiation_msg);
 
-    last_time_ = current_time;
-
     gazebo_rad_msgs::RadiationSource rad_out;
     rad_out.stamp    = ros::Time::now();
-    rad_out.x        = T_W_I.Pos().X();
-    rad_out.y        = T_W_I.Pos().Y();
-    rad_out.z        = T_W_I.Pos().Z();
+    rad_out.x        = pose.Pos().X();
+    rad_out.y        = pose.Pos().Y();
+    rad_out.z        = pose.Pos().Z();
     rad_out.activity = activity_;
     rad_out.material = material_;
     rad_out.id       = this->node_handle_->GetId();
