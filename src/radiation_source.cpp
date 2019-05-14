@@ -55,7 +55,7 @@ namespace gazebo
     std::unique_ptr<ros::NodeHandle> rosNode;
     ros::CallbackQueue               rosQueue;
     std::thread                      rosQueueThread;
-    ros::Publisher                   test_pub;
+    ros::Publisher                   debug_pos_pub;
 
     gazebo_rad_msgs::msgs::RadiationSource radiation_msg;
 
@@ -118,7 +118,7 @@ namespace gazebo
 
     this->rad_pub = node_handle_->Advertise<gazebo_rad_msgs::msgs::RadiationSource>("~/radiation/sources", 1);
 
-    this->test_pub = this->rosNode->advertise<gazebo_rad_msgs::RadiationSource>("radiation", 1);
+    this->debug_pos_pub = this->rosNode->advertise<gazebo_rad_msgs::RadiationSource>("/radiation/sources", 1);
 
     this->rosQueueThread = std::thread(std::bind(&RadiationSource::QueueThread, this));
 
@@ -151,7 +151,7 @@ namespace gazebo
     rad_out.material = material_;
     rad_out.id       = this->node_handle_->GetId();
 
-    test_pub.publish(rad_out);
+    debug_pos_pub.publish(rad_out);
   }
 
   //}
