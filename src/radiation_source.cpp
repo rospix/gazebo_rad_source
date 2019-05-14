@@ -12,10 +12,10 @@
 #include <gazebo/physics/physics.hh>
 #include <ignition/math.hh>
 
-#include <mutex>
-
 #include <gazebo_rad_msgs/RadiationSource.pb.h>
 #include <gazebo_rad_msgs/RadiationSource.h>
+
+#include <geometry_msgs/PoseStamped.h>
 
 namespace gazebo
 {
@@ -118,7 +118,7 @@ namespace gazebo
 
     this->rad_pub = node_handle_->Advertise<gazebo_rad_msgs::msgs::RadiationSource>("~/radiation/sources", 1);
 
-    this->debug_pos_pub = this->rosNode->advertise<gazebo_rad_msgs::RadiationSource>("/radiation/sources", 1);
+    this->debug_pos_pub = this->rosNode->advertise<geometry_msgs::PoseStamped>("/radiation/sources", 1);
 
     this->rosQueueThread = std::thread(std::bind(&RadiationSource::QueueThread, this));
 
@@ -142,16 +142,14 @@ namespace gazebo
 
     rad_pub->Publish(radiation_msg);
 
-    gazebo_rad_msgs::RadiationSource rad_out;
-    rad_out.stamp    = ros::Time::now();
-    rad_out.x        = pose.Pos().X();
-    rad_out.y        = pose.Pos().Y();
-    rad_out.z        = pose.Pos().Z();
-    rad_out.activity = activity_;
-    rad_out.material = material_;
-    rad_out.id       = this->node_handle_->GetId();
+    geometry_msgs::PoseStamped debug_pose;
+    debug_pose.header.stamp    = ros::Time::now();
+    debug_pose.header.frame_id = "local_origin";
+    debug_pose.pose.position.x = pose.Pos().X();
+    debug_pose.pose.position.y = pose.Pos().Y();
+    debug_pose.pose.position.z = pose.Pos().Z();
 
-    debug_pos_pub.publish(rad_out);
+    debug_pos_pub.publish(debug_pose);
   }
 
   //}
