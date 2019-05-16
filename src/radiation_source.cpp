@@ -16,6 +16,7 @@
 #include <gazebo_rad_msgs/RadiationSource.h>
 
 #include <geometry_msgs/PoseStamped.h>
+#include <std_msgs/Float32.h>
 
 namespace gazebo
 {
@@ -36,7 +37,7 @@ namespace gazebo
 
   protected:
     virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
-    virtual void OnUpdate(const common::UpdateInfo&);
+    virtual void OnUpdate(const common::UpdateInfo &);
 
   private:
     std::string namespace_;
@@ -56,10 +57,12 @@ namespace gazebo
     ros::CallbackQueue               rosQueue;
     std::thread                      rosQueueThread;
     ros::Publisher                   debug_pos_pub;
+    ros::Subscriber                  change_activity_sub;
 
     gazebo_rad_msgs::msgs::RadiationSource radiation_msg;
 
     std::string modelName;
+    void        setActivityCallback(const std_msgs::Float32ConstPtr &msg);
 
   private:
     std::string material_;
@@ -82,12 +85,19 @@ namespace gazebo
 
   //}
 
+  /* setActivityCallback */  //{
+  void RadiationSource::setActivityCallback(const std_msgs::Float32ConstPtr &msg) {
+    this->activity_ = msg->data;
+    ROS_INFO("[RadiationSource%u]: Activity changed to %.1f Bq", this->model_->GetId(), this->activity_);
+  }
+  //}
+
   /* Load() //{ */
 
   void RadiationSource::Load(physics::ModelPtr _model, [[maybe_unused]] sdf::ElementPtr _sdf) {
 
     int    argc = 0;
-    char** argv = NULL;
+    char **argv = NULL;
     ros::init(argc, argv, "gazebo_ros_radiation", ros::init_options::NoSigintHandler);
 
     this->rosNode.reset(new ros::NodeHandle("~"));
@@ -118,7 +128,8 @@ namespace gazebo
 
     this->rad_pub = node_handle_->Advertise<gazebo_rad_msgs::msgs::RadiationSource>("~/radiation/sources", 1);
 
-    this->debug_pos_pub = this->rosNode->advertise<geometry_msgs::PoseStamped>("/radiation/sources", 1);
+    this->debug_pos_pub       = this->rosNode->advertise<geometry_msgs::PoseStamped>("/radiation/sources", 1);
+    this->change_activity_sub = this->rosNode->subscribe("/radiation/debug/set_activity", 1, &RadiationSource::setActivityCallback, this);
 
     this->rosQueueThread = std::thread(std::bind(&RadiationSource::QueueThread, this));
 
@@ -129,7 +140,7 @@ namespace gazebo
 
   /* OnUpdate() //{ */
 
-  void RadiationSource::OnUpdate(const common::UpdateInfo&) {
+  void RadiationSource::OnUpdate(const common::UpdateInfo &) {
 
     auto pose = model_->WorldPose();
 
