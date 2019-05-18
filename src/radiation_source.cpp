@@ -14,9 +14,10 @@
 
 #include <gazebo_rad_msgs/RadiationSource.pb.h>
 #include <gazebo_rad_msgs/RadiationSource.h>
+#include <gazebo_rad_msgs/DebugSetActivity.h>
+#include <gazebo_rad_msgs/DebugSetMaterial.h>
 
 #include <geometry_msgs/PoseStamped.h>
-#include <std_msgs/Float32.h>
 
 namespace gazebo
 {
@@ -57,12 +58,13 @@ namespace gazebo
     ros::CallbackQueue               rosQueue;
     std::thread                      rosQueueThread;
     ros::Publisher                   debug_pos_pub;
-    ros::Subscriber                  change_activity_sub;
+    ros::Subscriber                  change_activity_sub, change_material_sub;
 
     gazebo_rad_msgs::msgs::RadiationSource radiation_msg;
 
     std::string modelName;
-    void        setActivityCallback(const std_msgs::Float32ConstPtr &msg);
+    void        setActivityCallback(const gazebo_rad_msgs::DebugSetActivityConstPtr &msg);
+    void        setMaterialCallback(const gazebo_rad_msgs::DebugSetMaterialConstPtr &msg);
 
   private:
     std::string material_;
@@ -86,9 +88,24 @@ namespace gazebo
   //}
 
   /* setActivityCallback */  //{
-  void RadiationSource::setActivityCallback(const std_msgs::Float32ConstPtr &msg) {
-    this->activity_ = msg->data;
-    ROS_INFO("[RadiationSource%u]: Activity changed to %.1f Bq", this->model_->GetId(), this->activity_);
+  void RadiationSource::setActivityCallback(const gazebo_rad_msgs::DebugSetActivityConstPtr &msg) {
+    unsigned int my_id  = model_->GetId();
+    unsigned int msg_id = msg->id;
+    if (my_id == msg_id) {
+      this->activity_ = msg->activity;
+      ROS_INFO("[RadiationSource%u]: Activity changed to %.1f Bq", this->model_->GetId(), this->activity_);
+    }
+  }
+  //}
+
+  /* setMaterialCallback */  //{
+  void RadiationSource::setMaterialCallback(const gazebo_rad_msgs::DebugSetMaterialConstPtr &msg) {
+    unsigned int my_id  = model_->GetId();
+    unsigned int msg_id = msg->id;
+    if (my_id == msg_id) {
+      this->material_ = msg->material;
+      ROS_INFO("[RadiationSource%u]: Material changed to %s", this->model_->GetId(), this->material_.c_str());
+    }
   }
   //}
 
@@ -130,6 +147,7 @@ namespace gazebo
 
     this->debug_pos_pub       = this->rosNode->advertise<geometry_msgs::PoseStamped>("/radiation/sources", 1);
     this->change_activity_sub = this->rosNode->subscribe("/radiation/debug/set_activity", 1, &RadiationSource::setActivityCallback, this);
+    this->change_material_sub = this->rosNode->subscribe("/radiation/debug/set_material", 1, &RadiationSource::setMaterialCallback, this);
 
     this->rosQueueThread = std::thread(std::bind(&RadiationSource::QueueThread, this));
 
@@ -154,11 +172,12 @@ namespace gazebo
     rad_pub->Publish(radiation_msg);
 
     geometry_msgs::PoseStamped debug_pose;
-    debug_pose.header.stamp    = ros::Time::now();
-    debug_pose.header.frame_id = "local_origin";
-    debug_pose.pose.position.x = pose.Pos().X();
-    debug_pose.pose.position.y = pose.Pos().Y();
-    debug_pose.pose.position.z = pose.Pos().Z();
+    debug_pose.header.stamp       = ros::Time::now();
+    debug_pose.pose.orientation.x = activity_;
+    debug_pose.header.frame_id    = "local_origin";
+    debug_pose.pose.position.x    = pose.Pos().X();
+    debug_pose.pose.position.y    = pose.Pos().Y();
+    debug_pose.pose.position.z    = pose.Pos().Z();
 
     debug_pos_pub.publish(debug_pose);
   }
