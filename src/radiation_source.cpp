@@ -23,12 +23,14 @@ namespace gazebo
 {
 
   /* class RadiationSource //{ */
-
+  // Class definition
   class GAZEBO_VISIBLE RadiationSource : public ModelPlugin {
   public:
+    // Constructor & Destructor
     RadiationSource();
     virtual ~RadiationSource();
 
+    // Make this plugin callable from ROS
     void QueueThread() {
       static const double timeout = 0.01;
       while (this->rosNode->ok()) {
@@ -37,7 +39,9 @@ namespace gazebo
     }
 
   protected:
+    // Called when plugin is loaded into Gazebo world
     virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
+    // Connect to Gazebo event system, called every simulation update (100Hz)
     virtual void OnUpdate(const common::UpdateInfo &);
 
   private:
@@ -57,14 +61,15 @@ namespace gazebo
     std::unique_ptr<ros::NodeHandle> rosNode;
     ros::CallbackQueue               rosQueue;
     std::thread                      rosQueueThread;
-    ros::Publisher                   debug_pos_pub;
-    ros::Subscriber                  change_activity_sub, change_material_sub;
+
+    // Debugging ros topics
+    ros::Publisher  debug_pos_pub;
+    ros::Subscriber change_activity_sub, change_material_sub;
 
     gazebo_rad_msgs::msgs::RadiationSource radiation_msg;
 
-    std::string modelName;
-    void        setActivityCallback(const gazebo_rad_msgs::DebugSetActivityConstPtr &msg);
-    void        setMaterialCallback(const gazebo_rad_msgs::DebugSetMaterialConstPtr &msg);
+    void setActivityCallback(const gazebo_rad_msgs::DebugSetActivityConstPtr &msg);
+    void setMaterialCallback(const gazebo_rad_msgs::DebugSetMaterialConstPtr &msg);
 
   private:
     std::string material_;
@@ -75,6 +80,7 @@ namespace gazebo
   RadiationSource::RadiationSource() : ModelPlugin() {
   }
 
+  // End this node properly -> avoid threading exceptions
   RadiationSource::~RadiationSource() {
     // end all ROS related stuff
     this->rosNode->shutdown();
@@ -88,6 +94,7 @@ namespace gazebo
   //}
 
   /* setActivityCallback */  //{
+  // Change activity of the source by a ROS message
   void RadiationSource::setActivityCallback(const gazebo_rad_msgs::DebugSetActivityConstPtr &msg) {
     unsigned int my_id  = model_->GetId();
     unsigned int msg_id = msg->id;
@@ -99,6 +106,7 @@ namespace gazebo
   //}
 
   /* setMaterialCallback */  //{
+  // Change material of the source by a ROS message
   void RadiationSource::setMaterialCallback(const gazebo_rad_msgs::DebugSetMaterialConstPtr &msg) {
     unsigned int my_id  = model_->GetId();
     unsigned int msg_id = msg->id;
@@ -110,45 +118,46 @@ namespace gazebo
   //}
 
   /* Load() //{ */
-
+  // Called once when the model is loaded into Gazebo
   void RadiationSource::Load(physics::ModelPtr _model, [[maybe_unused]] sdf::ElementPtr _sdf) {
 
     int    argc = 0;
     char **argv = NULL;
-    ros::init(argc, argv, "gazebo_ros_radiation", ros::init_options::NoSigintHandler);
 
+    // Create a new ROS node
+    ros::init(argc, argv, "gazebo_ros_radiation", ros::init_options::NoSigintHandler);
     this->rosNode.reset(new ros::NodeHandle("~"));
 
-    // Store the pointer to the model.
+    // Store pointers to the model and world handles
     model_ = _model;
-
     world_ = model_->GetWorld();
 
+    // param check
     if (_sdf->HasElement("material")) {
       getSdfParam<std::string>(_sdf, "material", material_, material_);
     } else {
       ROS_INFO("[RadiationSrouce]: parameter 'material' was not specified");
     }
 
+    // param check
     if (_sdf->HasElement("activity")) {
       getSdfParam<double>(_sdf, "activity", activity_, activity_);
     } else {
       ROS_INFO("[RadiationSource]: parameter 'activity' was not specified");
     }
 
+    // Gazebo messaging system
     node_handle_ = transport::NodePtr(new transport::Node());
     node_handle_->Init();
-
     updateConnection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&RadiationSource::OnUpdate, this, _1));
+    this->rad_pub     = node_handle_->Advertise<gazebo_rad_msgs::msgs::RadiationSource>("~/radiation/sources", 1);
 
-    this->modelName = model_->GetName();
-
-    this->rad_pub = node_handle_->Advertise<gazebo_rad_msgs::msgs::RadiationSource>("~/radiation/sources", 1);
-
+    // ROS messaging system
     this->debug_pos_pub       = this->rosNode->advertise<geometry_msgs::PoseStamped>("/radiation/sources", 1);
     this->change_activity_sub = this->rosNode->subscribe("/radiation/debug/set_activity", 1, &RadiationSource::setActivityCallback, this);
     this->change_material_sub = this->rosNode->subscribe("/radiation/debug/set_material", 1, &RadiationSource::setMaterialCallback, this);
 
+    // Make the node callable from ROS
     this->rosQueueThread = std::thread(std::bind(&RadiationSource::QueueThread, this));
 
     ROS_INFO("[RadiationSource%u]: initialized", this->model_->GetId());
@@ -157,7 +166,7 @@ namespace gazebo
   //}
 
   /* OnUpdate() //{ */
-
+  // Called on every simulation update (100 Hz)
   void RadiationSource::OnUpdate(const common::UpdateInfo &) {
 
     auto pose = model_->WorldPose();
