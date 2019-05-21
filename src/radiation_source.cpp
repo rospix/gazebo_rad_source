@@ -167,12 +167,12 @@ namespace gazebo
     radiation_msg.set_z(pose.Pos().Z());
     radiation_msg.set_material(material_);
     radiation_msg.set_activity(activity_);
-    radiation_msg.set_id(this->node_handle_->GetId());
+    radiation_msg.set_id(this->model_->GetId());
 
     rad_pub->Publish(radiation_msg);
 
     geometry_msgs::PoseStamped debug_pose;
-    debug_pose.header.stamp       = ros::Time::now();
+    debug_pose.header.stamp.nsec = this->model_->GetId();
     debug_pose.pose.orientation.x = activity_;
     debug_pose.header.frame_id    = "local_origin";
     debug_pose.pose.position.x    = pose.Pos().X();
