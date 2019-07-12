@@ -18,7 +18,7 @@
     <plugin name="cs137" filename="libgazebo_rad_source.so">
 
       <material>Cs137</material>
-      <activity>100e11</activity>
+      <activity>1e9</activity>
 
     </plugin>
 
