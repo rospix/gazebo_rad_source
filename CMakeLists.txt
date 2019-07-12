@@ -5,6 +5,7 @@ set(CMAKE_CXX_FLAGS "${CMAXE_CXX_FLAGS} -std=c++17 -fno-diagnostics-color")
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  std_msgs
   gazebo_ros
   gazebo_rad_msgs
   )

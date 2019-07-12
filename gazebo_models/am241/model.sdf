@@ -16,9 +16,9 @@
     </link>
 
     <plugin name="am241" filename="libgazebo_rad_source.so">
-      <!-- <material>Am241</material> -->
-      <!-- <activity>1e9</activity> --> <!-- [Bq] -->
-      <!-- <publish_rate>10</publish_rate> --> <!-- [Hz] -->
+      <material>am241</material>
+      <activity>1e9</activity> <!-- [Bq] -->
+      <publish_rate>10</publish_rate> <!-- [Hz] -->
     </plugin>
 
   </model>

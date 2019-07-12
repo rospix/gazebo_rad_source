@@ -17,7 +17,7 @@
 
     <plugin name="cs137" filename="libgazebo_rad_source.so">
 
-      <material>Cs137</material>
+      <material>cs137</material>
       <activity>1e9</activity> <!-- [Bq] -->
       <publish_rate>10</publish_rate> <!-- [Hz] -->
 

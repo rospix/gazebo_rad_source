@@ -7,6 +7,11 @@
 #include <gazebo/physics/physics.hh>
 #include <gazebo/transport/transport.hh>
 
+#include <gazebo_rad_msgs/RadiationSource.pb.h>
+#include <gazebo_rad_msgs/RadiationSource.h>
+#include <gazebo_rad_msgs/DebugSetActivity.h>
+#include <gazebo_rad_msgs/DebugSetMaterial.h>
+
 namespace gazebo
 {
 class GAZEBO_VISIBLE Source : public ModelPlugin {
@@ -16,22 +21,30 @@ public:
 
 protected:
   virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
-  virtual void LateUpdate();
+  virtual void EarlyUpdate(const common::UpdateInfo &upd);
 
 private:
   bool          terminated;
   boost::thread publisher_thread;
   void          PublisherLoop();
 
-  std::string material;
-  double      activity;
-  double      publish_rate;
+  std::string                   material;
+  double                        activity;
+  double                        publish_rate;
+  std::chrono::duration<double> sleep_seconds;
 
   physics::ModelPtr       model_;
   transport::NodePtr      gazebo_node_;
   transport::PublisherPtr gazebo_publisher_;
   event::ConnectionPtr    updateConnection_;
-  void                    EarlyUpdate(const common::UpdateInfo &);
+
+  std::unique_ptr<ros::NodeHandle> ros_node;
+  ros::Publisher                   ros_publisher;
+  ros::Subscriber                  change_activity_sub;
+  ros::Subscriber                  change_material_sub;
+
+  void SetActivityCallback(const gazebo_rad_msgs::DebugSetActivityPtr &msg);
+  void SetMaterialCallback(const gazebo_rad_msgs::DebugSetMaterialPtr &msg);
 };
 
 GZ_REGISTER_MODEL_PLUGIN(Source)
