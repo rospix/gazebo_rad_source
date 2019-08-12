@@ -23,7 +23,11 @@ Source::~Source() {
 void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
 
   // init local variables
-  model_ = _model;
+  model_       = _model;
+  param_change = true;
+
+  position      = Eigen::Vector3d(model_->WorldPose().Pos().X(), model_->WorldPose().Pos().Y(), model_->WorldPose().Pos().Z());
+  prev_position = Eigen::Vector3d(model_->WorldPose().Pos().X(), model_->WorldPose().Pos().Y(), model_->WorldPose().Pos().Z());
 
   // parse sdf params
   if (_sdf->HasElement("material")) {
@@ -54,7 +58,6 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   ros_node.reset(new ros::NodeHandle("~"));
 
   // gazebo communication
-  updateConnection_            = event::Events::ConnectWorldUpdateBegin(boost::bind(&Source::EarlyUpdate, this, _1));
   this->gazebo_publisher_      = gazebo_node_->Advertise<gazebo_rad_msgs::msgs::RadiationSource>("~/radiation/sources", 1);
   this->termination_publisher_ = gazebo_node_->Advertise<gazebo_rad_msgs::msgs::Termination>("~/radiation/termination", 1);
 
@@ -72,6 +75,13 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
 /* PublisherLoop //{ */
 void Source::PublisherLoop() {
   while (!terminated) {
+
+    Eigen::Vector3d new_position(model_->WorldPose().Pos().X(), model_->WorldPose().Pos().Y(), model_->WorldPose().Pos().Z());
+
+    if (new_position == position && !param_change) {
+      std::this_thread::sleep_for(sleep_seconds);
+      continue;
+    }
 
     /* Gazebo message //{ */
     gazebo_rad_msgs::msgs::RadiationSource msg;
@@ -97,12 +107,9 @@ void Source::PublisherLoop() {
     //}
 
     std::this_thread::sleep_for(sleep_seconds);
+    position     = new_position;
+    param_change = false;
   }
-}
-//}
-
-/* EarlyUpdate //{ */
-void Source::EarlyUpdate(const common::UpdateInfo &upd) {
 }
 //}
 
@@ -113,6 +120,7 @@ void Source::SetActivityCallback(const gazebo_rad_msgs::DebugSetActivityPtr &msg
   if (my_id == msg_id) {
     activity = msg->activity;
     ROS_INFO("[RadiationSource%u]: Activity changed to %.1f Bq", model_->GetId(), activity);
+    param_change = true;
   }
 }
 //}
@@ -124,6 +132,7 @@ void Source::SetMaterialCallback(const gazebo_rad_msgs::DebugSetMaterialPtr &msg
   if (my_id == msg_id) {
     material = msg->material;
     ROS_INFO("[RadiationSource%u]: Material changed to %s", model_->GetId(), material.c_str());
+    param_change = true;
   }
 }
 //}

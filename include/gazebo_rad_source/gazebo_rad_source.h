@@ -1,6 +1,8 @@
 #ifndef GAZEBO_RAD_SOURCE_H
 #define GAZEBO_RAD_SOURCE_H
 
+#include <eigen3/Eigen/Core>
+
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <gazebo/gazebo.hh>
@@ -22,10 +24,13 @@ public:
 
 protected:
   virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
-  virtual void EarlyUpdate(const common::UpdateInfo &upd);
 
 private:
+  Eigen::Vector3d prev_position;
+  Eigen::Vector3d position;
+
   bool          terminated;
+  bool          param_change;
   boost::thread publisher_thread;
   void          PublisherLoop();
 
