@@ -27,7 +27,6 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   param_change = true;
 
   position      = Eigen::Vector3d(model_->WorldPose().Pos().X(), model_->WorldPose().Pos().Y(), model_->WorldPose().Pos().Z());
-  prev_position = Eigen::Vector3d(model_->WorldPose().Pos().X(), model_->WorldPose().Pos().Y(), model_->WorldPose().Pos().Z());
 
   // parse sdf params
   if (_sdf->HasElement("material")) {

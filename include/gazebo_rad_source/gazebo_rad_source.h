@@ -26,7 +26,6 @@ protected:
   virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
 
 private:
-  Eigen::Vector3d prev_position;
   Eigen::Vector3d position;
 
   bool          terminated;
