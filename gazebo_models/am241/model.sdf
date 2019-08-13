@@ -18,6 +18,7 @@
     <plugin name="am241" filename="libgazebo_rad_source.so">
       <material>am241</material>
       <activity>1e9</activity> <!-- [Bq] -->
+      <energy>0.05954</energy> <!-- [MeV] -->
       <publish_rate>10</publish_rate> <!-- [Hz] -->
     </plugin>
 

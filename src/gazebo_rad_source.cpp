@@ -26,7 +26,7 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   model_       = _model;
   param_change = true;
 
-  position      = Eigen::Vector3d(model_->WorldPose().Pos().X(), model_->WorldPose().Pos().Y(), model_->WorldPose().Pos().Z());
+  position = Eigen::Vector3d(model_->WorldPose().Pos().X(), model_->WorldPose().Pos().Y(), model_->WorldPose().Pos().Z());
 
   // parse sdf params
   if (_sdf->HasElement("material")) {
@@ -38,6 +38,11 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
     activity = _sdf->Get<double>("activity");
   } else {
     ROS_WARN("[RadiationSource%u]: parameter 'activity' was not specified", model_->GetId());
+  }
+  if (_sdf->HasElement("energy")) {
+    energy = _sdf->Get<double>("energy");
+  } else {
+    ROS_WARN("[RadiationSource%u]: parameter 'energy' was not specified", model_->GetId());
   }
   if (_sdf->HasElement("publish_rate")) {
     publish_rate  = _sdf->Get<double>("publish_rate");
@@ -75,12 +80,14 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
 void Source::PublisherLoop() {
   while (!terminated) {
 
-    Eigen::Vector3d new_position(model_->WorldPose().Pos().X(), model_->WorldPose().Pos().Y(), model_->WorldPose().Pos().Z());
+    /* Eigen::Vector3d new_position(model_->WorldPose().Pos().X(), model_->WorldPose().Pos().Y(), model_->WorldPose().Pos().Z()); */
 
-    if (new_position == position && !param_change) {
-      std::this_thread::sleep_for(sleep_seconds);
-      continue;
-    }
+    /* if (new_position == position && !param_change) { */
+    /*   std::this_thread::sleep_for(sleep_seconds); */
+    /*   continue; */
+    /* } */
+
+    /* std::cout << "Source material: " << material << "\n"; */
 
     /* Gazebo message //{ */
     gazebo_rad_msgs::msgs::RadiationSource msg;
@@ -90,6 +97,7 @@ void Source::PublisherLoop() {
     msg.set_id(model_->GetId());
     msg.set_material(material);
     msg.set_activity(activity);
+    msg.set_energy(energy);
     gazebo_publisher_->Publish(msg);
     //}
 
@@ -97,6 +105,7 @@ void Source::PublisherLoop() {
     gazebo_rad_msgs::RadiationSource debug_msg;
     debug_msg.activity = activity;
     debug_msg.material = material;
+    debug_msg.energy   = energy;
     debug_msg.id       = model_->GetId();
     debug_msg.x        = model_->WorldPose().Pos().X();
     debug_msg.y        = model_->WorldPose().Pos().Y();
@@ -106,8 +115,8 @@ void Source::PublisherLoop() {
     //}
 
     std::this_thread::sleep_for(sleep_seconds);
-    position     = new_position;
-    param_change = false;
+    /* position     = new_position; */
+    /* param_change = false; */
   }
 }
 //}

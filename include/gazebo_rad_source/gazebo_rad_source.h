@@ -35,6 +35,7 @@ private:
 
   std::string                   material;
   double                        activity;
+  double                        energy;
   double                        publish_rate;
   std::chrono::duration<double> sleep_seconds;
 
