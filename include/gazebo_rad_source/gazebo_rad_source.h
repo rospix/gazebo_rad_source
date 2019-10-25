@@ -9,6 +9,7 @@
 #include <gazebo/physics/physics.hh>
 #include <gazebo/transport/transport.hh>
 
+#include <geometry_msgs/Vector3.h>
 #include <gazebo_rad_msgs/Termination.pb.h>
 #include <gazebo_rad_msgs/RadiationSource.pb.h>
 #include <gazebo_rad_msgs/RadiationSource.h>
@@ -29,7 +30,6 @@ private:
   Eigen::Vector3d position;
 
   bool          terminated;
-  bool          param_change;
   boost::thread publisher_thread;
   void          PublisherLoop();
 

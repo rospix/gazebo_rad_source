@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>gazebo_rad_source</name>
-  <version>0.0.0</version>
+  <version>2.0.0</version>
   <description>custom radiation source</description>
   <maintainer email="tomas.baca@fel.cvut.cz">Tomas Baca</maintainer>
   <maintainer email="stibipet@fel.cvut.cz">Petr Stibinger</maintainer>
@@ -14,7 +14,6 @@
   <build_depend>std_msgs</build_depend>
   <build_depend>gazebo_ros</build_depend>
   <build_depend>gazebo_rad_msgs</build_depend>
-
 
   <run_depend>roscpp</run_depend>
   <run_depend>std_msgs</run_depend>
