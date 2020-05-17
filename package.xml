@@ -1,8 +1,11 @@
 <?xml version="1.0"?>
-<package>
+<package format="2">
+
   <name>gazebo_rad_source</name>
   <version>2.0.0</version>
+
   <description>custom radiation source</description>
+
   <maintainer email="tomas.baca@fel.cvut.cz">Tomas Baca</maintainer>
   <maintainer email="stibipet@fel.cvut.cz">Petr Stibinger</maintainer>
 
@@ -10,14 +13,13 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <build_depend>roscpp</build_depend>
-  <build_depend>std_msgs</build_depend>
-  <build_depend>gazebo_ros</build_depend>
-  <build_depend>gazebo_rad_msgs</build_depend>
+  <depend>roscpp</depend>
+  <depend>std_msgs</depend>
+  <depend>gazebo_ros</depend>
+  <depend>gazebo_rad_msgs</depend>
 
-  <run_depend>roscpp</run_depend>
-  <run_depend>std_msgs</run_depend>
-  <run_depend>gazebo_ros</run_depend>
-  <run_depend>gazebo_rad_msgs</run_depend>
+  <export>
+    <gazebo_ros gazebo_model_path="${prefix}/gazebo_files/models" />
+  </export>
 
 </package>
