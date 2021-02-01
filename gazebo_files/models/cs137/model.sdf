@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sdf version="1.5">
-  <model name="am241">
+  <model name="cs137">
     <static>1</static>
     <link name="link">
       <pose>0 0 0.1 0 0 0</pose>
@@ -15,12 +15,16 @@
 
     </link>
 
-    <plugin name="am241" filename="libgazebo_rad_source.so">
+    <plugin name="cs137" filename="libgazebo_rad_source.so">
 
-      <material>Am241</material>
-      <activity>500e6</activity>
+      <material>cs137</material>
+      <activity>1e9</activity> <!-- [Bq] -->
+      <energy>0.6617</energy> <!-- [MeV] -->
+      <publish_rate>10</publish_rate> <!-- [Hz] -->
 
     </plugin>
 
   </model>
 </sdf>
+
+
