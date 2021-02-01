@@ -6,7 +6,9 @@
 using namespace gazebo;
 
 /* Destructor //{ */
+
 Source::~Source() {
+
   // inform other gazebo nodes
   gazebo_rad_msgs::msgs::Termination msg;
   msg.set_id(model_->GetId());
@@ -17,9 +19,10 @@ Source::~Source() {
   publisher_thread.join();
   ROS_INFO("[RadiationSource%u]: Plugin terminated", model_->GetId());
 }
+
 //}
 
-/* Load //{ */
+/* Load() //{ */
 void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
 
   // init local variables
@@ -28,6 +31,7 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   position = Eigen::Vector3d(model_->WorldPose().Pos().X(), model_->WorldPose().Pos().Y(), model_->WorldPose().Pos().Z());
 
   /* parse sdf params //{ */
+
   if (_sdf->HasElement("material")) {
     material = _sdf->Get<std::string>("material");
   } else {
@@ -49,6 +53,7 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   } else {
     ROS_WARN("[RadiationSource%u]: parameter 'publish_rate' was not specified", model_->GetId());
   }
+
   //}
 
   // init gazebo node
@@ -76,11 +81,13 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
 }
 //}
 
-/* PublisherLoop //{ */
+/* PublisherLoop() //{ */
 void Source::PublisherLoop() {
+
   while (!terminated) {
 
     /* Gazebo message //{ */
+
     gazebo_rad_msgs::msgs::RadiationSource msg;
     msg.set_x(model_->WorldPose().Pos().X());
     msg.set_y(model_->WorldPose().Pos().Y());
@@ -90,9 +97,11 @@ void Source::PublisherLoop() {
     msg.set_activity(activity);
     msg.set_energy(energy);
     gazebo_publisher_->Publish(msg);
+
     //}
 
     /* ROS message (debug) //{ */
+
     gazebo_rad_msgs::RadiationSource debug_msg;
     debug_msg.activity    = activity;
     debug_msg.material    = material;
@@ -101,17 +110,21 @@ void Source::PublisherLoop() {
     debug_msg.world_pos.x = model_->WorldPose().Pos().X();
     debug_msg.world_pos.y = model_->WorldPose().Pos().Y();
     debug_msg.world_pos.z = model_->WorldPose().Pos().Z();
-    debug_msg.stamp = ros::Time::now();
+    debug_msg.stamp       = ros::Time::now();
     ros_publisher.publish(debug_msg);
+
     //}
 
     std::this_thread::sleep_for(sleep_seconds);
   }
 }
+
 //}
 
-/* SetActivityCallback //{ */
+/* SetActivityCallback() //{ */
+
 void Source::SetActivityCallback(const gazebo_rad_msgs::DebugSetActivityPtr &msg) {
+
   unsigned int my_id  = model_->GetId();
   unsigned int msg_id = msg->id;
   if (my_id == msg_id) {
@@ -119,15 +132,20 @@ void Source::SetActivityCallback(const gazebo_rad_msgs::DebugSetActivityPtr &msg
     ROS_INFO("[RadiationSource%u]: Activity changed to %.1f Bq", model_->GetId(), activity);
   }
 }
+
 //}
 
-/* setMaterialCallback //{ */
+/* setMaterialCallback() //{ */
+
 void Source::SetMaterialCallback(const gazebo_rad_msgs::DebugSetMaterialPtr &msg) {
+
   unsigned int my_id  = model_->GetId();
   unsigned int msg_id = msg->id;
+
   if (my_id == msg_id) {
     material = msg->material;
     ROS_INFO("[RadiationSource%u]: Material changed to %s", model_->GetId(), material.c_str());
   }
 }
+
 //}
