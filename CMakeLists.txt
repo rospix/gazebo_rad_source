@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   gazebo_ros
+  gazebo_plugins
   gazebo_rad_msgs
   )
 
@@ -28,18 +29,18 @@ include_directories(
   )
 
 add_library(
-  ${PROJECT_NAME} SHARED
-  src/${PROJECT_NAME}.cpp
+  gazebo_rad_source SHARED
+  src/gazebo_rad_source.cpp
   )
 
 target_link_libraries(
-  ${PROJECT_NAME}
+  gazebo_rad_source
   ${catkin_LIBRARIES}
   ${GAZEBO_LIBRARIES}
   )
 
 add_dependencies(
-  ${PROJECT_NAME}
+  gazebo_rad_source
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
   )

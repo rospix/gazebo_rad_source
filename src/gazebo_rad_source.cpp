@@ -124,6 +124,13 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
 }
 //}
 
+/* Source() //{ */
+
+Source::Source() {
+}
+
+//}
+
 /* ~Source() //{ */
 
 Source::~Source() {

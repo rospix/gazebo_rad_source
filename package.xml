@@ -15,11 +15,15 @@
 
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
+  <depend>gazebo</depend>
   <depend>gazebo_ros</depend>
   <depend>gazebo_rad_msgs</depend>
+  <depend>gazebo_plugins</depend>
 
   <export>
     <gazebo_ros gazebo_model_path="${prefix}/gazebo_files/models" />
+    <gazebo_ros gazebo_media_path="${prefix}"/>
+    <gazebo_ros plugin_path="${prefix}/lib"/>
   </export>
 
 </package>
