@@ -1,9 +1,69 @@
+/* includes //{ */
+
 #include <sdf/sdf.hh>
 #include <boost/thread.hpp>
 
-#include <gazebo_rad_source/gazebo_rad_source.h>
+#include <eigen3/Eigen/Core>
 
-using namespace gazebo;
+#include <ros/ros.h>
+#include <ros/package.h>
+#include <gazebo/gazebo.hh>
+#include <gazebo/physics/physics.hh>
+#include <gazebo/transport/transport.hh>
+
+#include <geometry_msgs/Vector3.h>
+#include <gazebo_rad_msgs/Termination.pb.h>
+#include <gazebo_rad_msgs/RadiationSource.pb.h>
+#include <gazebo_rad_msgs/RadiationSource.h>
+#include <gazebo_rad_msgs/DebugSetActivity.h>
+#include <gazebo_rad_msgs/DebugSetMaterial.h>
+
+//}
+
+namespace gazebo
+{
+
+/* class Source //{ */
+
+class GAZEBO_VISIBLE Source : public ModelPlugin {
+public:
+  Source();
+  virtual ~Source();
+
+protected:
+  virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
+
+private:
+  Eigen::Vector3d position;
+
+  bool          terminated;
+  boost::thread publisher_thread;
+  void          PublisherLoop();
+
+  std::string                   material;
+  double                        activity;
+  double                        energy;
+  double                        publish_rate;
+  std::chrono::duration<double> sleep_seconds;
+
+  physics::ModelPtr       model_;
+  transport::NodePtr      gazebo_node_;
+  transport::PublisherPtr gazebo_publisher_;
+  transport::PublisherPtr termination_publisher_;
+  event::ConnectionPtr    updateConnection_;
+
+  ros::NodeHandle ros_nh_;
+  ros::Publisher  ros_publisher;
+  ros::Subscriber change_activity_sub;
+  ros::Subscriber change_material_sub;
+
+  void SetActivityCallback(const gazebo_rad_msgs::DebugSetActivityPtr &msg);
+  void SetMaterialCallback(const gazebo_rad_msgs::DebugSetMaterialPtr &msg);
+};
+
+//}
+
+// | -------------------- Plugin interface -------------------- |
 
 /* Destructor //{ */
 
@@ -64,22 +124,24 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   int    argc = 0;
   char **argv = NULL;
   ros::init(argc, argv, "gazebo_rad_source", ros::init_options::NoSigintHandler);
-  ros_node.reset(new ros::NodeHandle("~"));
+  ros_nh_ = ros::NodeHandle("~");
 
   // gazebo communication
   this->gazebo_publisher_      = gazebo_node_->Advertise<gazebo_rad_msgs::msgs::RadiationSource>("~/radiation/sources", 1);
   this->termination_publisher_ = gazebo_node_->Advertise<gazebo_rad_msgs::msgs::Termination>("~/radiation/termination", 1);
 
   // ros communication
-  ros_publisher       = ros_node->advertise<gazebo_rad_msgs::RadiationSource>("/radiation/sources", 1);
-  change_activity_sub = ros_node->subscribe("/radiation/debug/set_activity", 1, &Source::SetActivityCallback, this);
-  change_material_sub = ros_node->subscribe("/radiation/debug/set_material", 1, &Source::SetMaterialCallback, this);
+  ros_publisher       = ros_nh_.advertise<gazebo_rad_msgs::RadiationSource>("/radiation/sources", 1);
+  change_activity_sub = ros_nh_.subscribe("/radiation/debug/set_activity", 1, &Source::SetActivityCallback, this);
+  change_material_sub = ros_nh_.subscribe("/radiation/debug/set_material", 1, &Source::SetMaterialCallback, this);
 
   terminated       = false;
   publisher_thread = boost::thread(boost::bind(&Source::PublisherLoop, this));
   ROS_INFO("[RadiationSource%u]: Plugin initialized", model_->GetId());
 }
 //}
+
+// | --------------------- Custom routines -------------------- |
 
 /* PublisherLoop() //{ */
 void Source::PublisherLoop() {
@@ -127,6 +189,7 @@ void Source::SetActivityCallback(const gazebo_rad_msgs::DebugSetActivityPtr &msg
 
   unsigned int my_id  = model_->GetId();
   unsigned int msg_id = msg->id;
+
   if (my_id == msg_id) {
     activity = msg->activity;
     ROS_INFO("[RadiationSource%u]: Activity changed to %.1f Bq", model_->GetId(), activity);
@@ -149,3 +212,7 @@ void Source::SetMaterialCallback(const gazebo_rad_msgs::DebugSetMaterialPtr &msg
 }
 
 //}
+
+}  // namespace gazebo
+
+GZ_REGISTER_MODEL_PLUGIN(gazebo::Source)

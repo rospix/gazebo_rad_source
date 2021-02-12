@@ -11,7 +11,6 @@ find_package(catkin REQUIRED COMPONENTS
   gazebo_rad_msgs
   )
 
-# include Eigen3
 find_package(Eigen3 REQUIRED)
 set(Eigen_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIRS})
 set(Eigen_LIBRARIES ${Eigen_LIBRARIES})
@@ -19,13 +18,11 @@ set(Eigen_LIBRARIES ${Eigen_LIBRARIES})
 find_package(gazebo REQUIRED)
 
 catkin_package(
-  INCLUDE_DIRS include
   DEPENDS gazebo_ros gazebo_rad_msgs
   CATKIN_DEPENDS roscpp std_msgs
   )
 
 include_directories(
-  include
   ${catkin_INCLUDE_DIRS}
   ${GAZEBO_INCLUDE_DIRS}
   )
