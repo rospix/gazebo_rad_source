@@ -12,6 +12,7 @@
 #include <gazebo/transport/transport.hh>
 
 #include <geometry_msgs/Vector3.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <gazebo_rad_msgs/Termination.pb.h>
 #include <gazebo_rad_msgs/RadiationSource.pb.h>
 #include <gazebo_rad_msgs/RadiationSource.h>
@@ -54,6 +55,7 @@ private:
 
   ros::NodeHandle ros_nh_;
   ros::Publisher  ros_publisher;
+  ros::Publisher  ros_gt_publisher;
   ros::Subscriber change_activity_sub;
   ros::Subscriber change_material_sub;
 
@@ -115,6 +117,7 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
 
   // ros communication
   ros_publisher       = ros_nh_.advertise<gazebo_rad_msgs::RadiationSource>("/radiation/sources", 1);
+  ros_gt_publisher    = ros_nh_.advertise<geometry_msgs::PoseStamped>(_model->GetName() + "/source_gt", 1);
   change_activity_sub = ros_nh_.subscribe("/radiation/debug/set_activity", 1, &Source::SetActivityCallback, this);
   change_material_sub = ros_nh_.subscribe("/radiation/debug/set_material", 1, &Source::SetMaterialCallback, this);
 
@@ -216,6 +219,18 @@ void Source::PublisherLoop() {
     ros_publisher.publish(debug_msg);
 
     //}
+
+    geometry_msgs::PoseStamped pose_msg;
+    pose_msg.header.stamp = ros::Time::now();
+    pose_msg.header.frame_id = "uav1/gps_origin";
+    pose_msg.pose.position.x = model_->WorldPose().Pos().X();
+    pose_msg.pose.position.y = model_->WorldPose().Pos().Y();
+    pose_msg.pose.position.z = model_->WorldPose().Pos().Z();
+    pose_msg.pose.orientation.x = 0;
+    pose_msg.pose.orientation.y = 0;
+    pose_msg.pose.orientation.z = 1;
+    pose_msg.pose.orientation.w = 0;
+    ros_gt_publisher.publish(pose_msg);
 
     std::this_thread::sleep_for(sleep_seconds);
   }
