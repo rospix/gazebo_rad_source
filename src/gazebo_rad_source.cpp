@@ -19,6 +19,11 @@
 #include <gazebo_rad_msgs/DebugSetActivity.h>
 #include <gazebo_rad_msgs/DebugSetMaterial.h>
 
+#include <mrs_msgs/Vec4.h>
+#include <mrs_msgs/Float64Srv.h>
+#include <mrs_msgs/String.h>
+#include <mrs_lib/mutex.h>
+
 //}
 
 namespace gazebo
@@ -31,6 +36,8 @@ public:
   Source();
   virtual ~Source();
 
+  void onWorldUpdate();
+
 protected:
   virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
 
@@ -41,11 +48,18 @@ private:
   boost::thread publisher_thread;
   void          PublisherLoop();
 
-  std::string                   material;
-  double                        activity;
+  std::string material_;
+  std::mutex  material_mutex_;
+
+  double     activity_;
+  std::mutex activity_mutex_;
+
   double                        energy;
   double                        publish_rate;
   std::chrono::duration<double> sleep_seconds;
+
+  ignition::math::Vector3d velocity_;
+  std::mutex               velocity_mutex_;
 
   physics::ModelPtr       model_;
   transport::NodePtr      gazebo_node_;
@@ -53,14 +67,16 @@ private:
   transport::PublisherPtr termination_publisher_;
   event::ConnectionPtr    updateConnection_;
 
-  ros::NodeHandle ros_nh_;
-  ros::Publisher  ros_publisher;
-  ros::Publisher  ros_gt_publisher;
-  ros::Subscriber change_activity_sub;
-  ros::Subscriber change_material_sub;
+  ros::NodeHandle    ros_nh_;
+  ros::Publisher     ros_publisher;
+  ros::Publisher     ros_gt_publisher;
+  ros::ServiceServer set_activity_server;
+  ros::ServiceServer set_material_server;
+  ros::ServiceServer set_motion_server;
 
-  void SetActivityCallback(const gazebo_rad_msgs::DebugSetActivityPtr &msg);
-  void SetMaterialCallback(const gazebo_rad_msgs::DebugSetMaterialPtr &msg);
+  bool SetActivityCallback(mrs_msgs::Float64Srv::Request &req, mrs_msgs::Float64Srv::Response &res);
+  bool SetMaterialCallback(mrs_msgs::String::Request &req, mrs_msgs::String::Response &res);
+  bool SetMotionCallback(mrs_msgs::Vec4::Request &req, mrs_msgs::Vec4::Response &res);
 };
 
 //}
@@ -78,12 +94,12 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   /* parse sdf params //{ */
 
   if (_sdf->HasElement("material")) {
-    material = _sdf->Get<std::string>("material");
+    material_ = _sdf->Get<std::string>("material");
   } else {
     ROS_WARN("[RadiationSource%u]: parameter 'material' was not specified", model_->GetId());
   }
   if (_sdf->HasElement("activity")) {
-    activity = _sdf->Get<double>("activity");
+    activity_ = _sdf->Get<double>("activity");
   } else {
     ROS_WARN("[RadiationSource%u]: parameter 'activity' was not specified", model_->GetId());
   }
@@ -97,6 +113,29 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
     sleep_seconds = std::chrono::duration<double>(1 / publish_rate);
   } else {
     ROS_WARN("[RadiationSource%u]: parameter 'publish_rate' was not specified", model_->GetId());
+  }
+  if (_sdf->HasElement("velocity")) {
+    auto velocity = _sdf->GetElement("velocity");
+    if (velocity->HasElement("x")) {
+      velocity_.X() = velocity->Get<double>("x");
+    } else {
+      ROS_WARN("[RadiationSource%u]: parameter 'velocity/x' was not specified", model_->GetId());
+      velocity_.X() = 0;
+    }
+    if (velocity->HasElement("y")) {
+      velocity_.Y() = velocity->Get<double>("y");
+    } else {
+      ROS_WARN("[RadiationSource%u]: parameter 'velocity/y' was not specified", model_->GetId());
+      velocity_.Y() = 0;
+    }
+    if (velocity->HasElement("z")) {
+      velocity_.Z() = velocity->Get<double>("z");
+    } else {
+      ROS_WARN("[RadiationSource%u]: parameter 'velocity/z' was not specified", model_->GetId());
+      velocity_.Z() = 0;
+    }
+  } else {
+    ROS_WARN("[RadiationSource%u]: parameter 'velocity' was not specified", model_->GetId());
   }
 
   //}
@@ -118,8 +157,11 @@ void Source::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   // ros communication
   ros_publisher       = ros_nh_.advertise<gazebo_rad_msgs::RadiationSource>("/radiation/sources", 1);
   ros_gt_publisher    = ros_nh_.advertise<geometry_msgs::PoseStamped>(_model->GetName() + "/source_gt", 1);
-  change_activity_sub = ros_nh_.subscribe("/radiation/debug/set_activity", 1, &Source::SetActivityCallback, this);
-  change_material_sub = ros_nh_.subscribe("/radiation/debug/set_material", 1, &Source::SetMaterialCallback, this);
+  set_activity_server = ros_nh_.advertiseService(_model->GetName() + "/set_activity", &Source::SetActivityCallback, this);
+  set_material_server = ros_nh_.advertiseService(_model->GetName() + "/set_material", &Source::SetMaterialCallback, this);
+  set_motion_server   = ros_nh_.advertiseService(_model->GetName() + "/set_motion", &Source::SetMotionCallback, this);
+
+  updateConnection_ = event::Events::ConnectWorldUpdateBegin(std::bind(&Source::onWorldUpdate, this));
 
   terminated       = false;
   publisher_thread = boost::thread(boost::bind(&Source::PublisherLoop, this));
@@ -155,30 +197,40 @@ Source::~Source() {
 
 /* SetActivityCallback() //{ */
 
-void Source::SetActivityCallback(const gazebo_rad_msgs::DebugSetActivityPtr &msg) {
-
-  unsigned int my_id  = model_->GetId();
-  unsigned int msg_id = msg->id;
-
-  if (my_id == msg_id) {
-    activity = msg->activity;
-    ROS_INFO("[RadiationSource%u]: Activity changed to %.1f Bq", model_->GetId(), activity);
+bool Source::SetActivityCallback(mrs_msgs::Float64Srv::Request &req, mrs_msgs::Float64Srv::Response &res) {
+  std::stringstream msg;
+  auto              activity = mrs_lib::get_mutexed(activity_mutex_, activity_);
+  if (req.value != activity) {
+    mrs_lib::set_mutexed(activity_mutex_, req.value, activity_);
+    msg << "Activity set to " << req.value;
+    ROS_INFO("[RadiationSource%u]: %s", model_->GetId(), msg.str().c_str());
+    res.success = true;
+  } else {
+    msg << "Activity is already at " << req.value;
+    res.success = false;
   }
+  res.message = msg.str();
+  return true;
 }
 
 //}
 
 /* setMaterialCallback() //{ */
 
-void Source::SetMaterialCallback(const gazebo_rad_msgs::DebugSetMaterialPtr &msg) {
-
-  unsigned int my_id  = model_->GetId();
-  unsigned int msg_id = msg->id;
-
-  if (my_id == msg_id) {
-    material = msg->material;
-    ROS_INFO("[RadiationSource%u]: Material changed to %s", model_->GetId(), material.c_str());
+bool Source::SetMaterialCallback(mrs_msgs::String::Request &req, mrs_msgs::String::Response &res) {
+  std::stringstream msg;
+  auto              material = mrs_lib::get_mutexed(material_mutex_, material_);
+  if (req.value != material) {
+    mrs_lib::set_mutexed(material_mutex_, req.value, material_);
+    msg << "Material set to" << req.value;
+    ROS_INFO("[RadiationSource%u]: %s", model_->GetId(), msg.str().c_str());
+    res.success = true;
+  } else {
+    msg << "Material is already " << req.value;
+    res.success = false;
   }
+  res.message = msg.str();
+  return true;
 }
 
 //}
@@ -193,6 +245,9 @@ void Source::PublisherLoop() {
 
     /* Gazebo message //{ */
 
+    auto material = mrs_lib::get_mutexed(material_mutex_, material_);
+    auto activity = mrs_lib::get_mutexed(activity_mutex_, activity_);
+
     gazebo_rad_msgs::msgs::RadiationSource msg;
     msg.set_x(model_->WorldPose().Pos().X());
     msg.set_y(model_->WorldPose().Pos().Y());
@@ -206,7 +261,7 @@ void Source::PublisherLoop() {
     //}
 
     /* ROS message (debug) //{ */
-
+    
     gazebo_rad_msgs::RadiationSource debug_msg;
     debug_msg.activity    = activity;
     debug_msg.material    = material;
@@ -221,11 +276,11 @@ void Source::PublisherLoop() {
     //}
 
     geometry_msgs::PoseStamped pose_msg;
-    pose_msg.header.stamp = ros::Time::now();
-    pose_msg.header.frame_id = "uav1/gps_origin";
-    pose_msg.pose.position.x = model_->WorldPose().Pos().X();
-    pose_msg.pose.position.y = model_->WorldPose().Pos().Y();
-    pose_msg.pose.position.z = model_->WorldPose().Pos().Z();
+    pose_msg.header.stamp       = ros::Time::now();
+    pose_msg.header.frame_id    = "uav1/gps_origin";
+    pose_msg.pose.position.x    = model_->WorldPose().Pos().X();
+    pose_msg.pose.position.y    = model_->WorldPose().Pos().Y();
+    pose_msg.pose.position.z    = model_->WorldPose().Pos().Z();
     pose_msg.pose.orientation.x = 0;
     pose_msg.pose.orientation.y = 0;
     pose_msg.pose.orientation.z = 1;
@@ -236,6 +291,31 @@ void Source::PublisherLoop() {
   }
 }
 
+//}
+
+/* onWorldUpdate //{ */
+void Source::onWorldUpdate() {
+  auto velocity = mrs_lib::get_mutexed(velocity_mutex_, velocity_);
+  model_->SetLinearVel(velocity);
+}
+//}
+
+/* SetMotionCallback //{ */
+bool Source::SetMotionCallback(mrs_msgs::Vec4::Request &req, mrs_msgs::Vec4::Response &res) {
+  ignition::math::Vector3d velocity;
+  velocity.X() = req.goal[0];
+  velocity.Y() = req.goal[1];
+  velocity.Z() = req.goal[2];
+
+  mrs_lib::set_mutexed(velocity_mutex_, velocity, velocity_);
+
+  std::stringstream msg;
+  msg << "Velocity set: " << velocity.X() << ", " << velocity.Y() << ", " << velocity.Z();
+  ROS_INFO("[RadiationSource%u]: %s", model_->GetId(), msg.str().c_str());
+  res.message = msg.str();
+  res.success = true;
+  return true;
+}
 //}
 
 }  // namespace gazebo
