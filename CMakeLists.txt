@@ -38,7 +38,6 @@ add_library(
 target_link_libraries(
   gazebo_rad_source
   ${catkin_LIBRARIES}
-  ${GAZEBO_LIBRARIES}
   )
 
 add_dependencies(
